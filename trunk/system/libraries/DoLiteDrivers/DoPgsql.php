@@ -45,7 +45,7 @@ class DoLitePgsql
     
     public function lastInsertId()
     {
-        return $this->_result) ? pg_last_oid($this->_result): 0;
+        return $this->_result ? pg_last_oid($this->_result): 0;
     }
     
     // -----------------------------------------------------------------------
@@ -351,7 +351,7 @@ class DoLiteStatementPgsql extends DoLiteStatement
     
     protected function _setErrors($error)
     {
-        if ( ! $this->_result)) {
+        if ( ! $this->_result) {
             $errno = 1;
             $errst = pg_last_error();
         } else {
