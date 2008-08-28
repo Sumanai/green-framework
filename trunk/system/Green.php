@@ -29,7 +29,7 @@
       Philippe Archambault <philippe.archambault@gmail.com>
 */
 
-Benchmark::mark('start');
+Benchmark::start('start');
 
 // Framework constants
 
@@ -139,22 +139,12 @@ final class Green
 	*/
 	public static function dispatch($url=null)
 	{
-		Benchmark::mark('dispatch start');
+		Benchmark::start('dispatch start');
 		
-		if ($url === null)
-		{
-			if (strpos($_SERVER['QUERY_STRING'], '?') !== false)
-				$_SERVER['QUERY_STRING'] = strtr($_SERVER['QUERY_STRING'], '?',  '&');
-
-			$url_segments = explode('&', $_SERVER['QUERY_STRING']);
-			$url = array_shift($url_segments);
-
-			foreach ($url_segments as $segments)
-			{
-				list($k,$v) = explode('=', $segments);
-				$_GET[$k] = $v;
-			}
-		}
+		if ($url === null) $url = $_SERVER['QUERY_STRING'];
+		
+		// we populate the $_GET table
+		if( $pos = strpos($url,'&') ) parse_str(substr($url, $pos), $_GET);
 
 		// remove slashes (for route convention)
 		$url = trim($url, '/');
@@ -259,7 +249,7 @@ final class Green
 			throw new Exception("Class '{$controller_class_name}' does not extends Controller class!");
 
 		Observer::notify('system.execute');
-		Benchmark::mark('execute start');
+		Benchmark::start('execute start');
 
 		// execute the action
 		$controller->execute($action, $params);
@@ -653,6 +643,7 @@ class AutoLoader
 
 if ( ! function_exists('__autoload')) {
 	AutoLoader::addFolder(array(APP_PATH.'/models/', APP_PATH.'/controllers/'));
+	AutoLoader::addFile('Model', GREEN_ROOT.'/Model.php');
 	
 	function __autoload($class_name)
 	{
@@ -668,42 +659,66 @@ if ( ! function_exists('__autoload')) {
 */
 final class Benchmark
 {
-	public static $mark = array();
+	public static $marks = array();
 
 	/*
-	   Method: mark
-	   Add a new mark to benchmark
+	   Method: Start
+	   Set a benchmark start point.
 	*/
-	public static function mark($name)
+	public static function start($name)
 	{
-		self::$mark[$name] = microtime(true);
+		if (!isset(self::$marks[$name]))
+		{
+			self::$marks[$name] = array
+			(
+				'start'        => microtime(true),
+				'stop'         => false,
+				'memory_start' => function_exists('memory_get_usage') ? memory_get_usage() : 0,
+				'memory_stop'  => false
+			);
+		}
 	}
 
 	/*
-	   Method: time
-	   Get the execution time between 2 marks
+	   Method: stop
+	   Set a benchmark stop point.
 	*/
-	public static function time($start='start', $end='', $decimals=4)
+	public static function stop($name)
 	{
-		if ($end == '')
-			return number_format(microtime(true) - self::$mark[$start], $decimals);
-
-		if (!isset(self::$mark[$start]))
-			return '';
-
-		if (!isset(self::$mark[$end]))
-			self::$mark[$end] = microtime(true);
-
-		return number_format(self::$mark[$end] - self::$mark[$start], $decimals);
+		if (isset(self::$marks[$name]))
+		{
+			self::$marks[$name]['stop'] = microtime(true);
+			self::$marks[$name]['memory_stop'] = function_exists('memory_get_usage') ? memory_get_usage() : 0;
+		}
 	}
 
 	/*
-	   Method: memory
-	   Get the memories used by PHP
+	   Method: get
+	   Get the elapsed time between a start and stop of a mark name, TRUE for all.
 	*/
-	public static function memory($decimals = 2)
+	public static function get($name, $decimals = 4)
 	{
-		return sprintf('%01.'.$decimals.'f kb', memory_get_usage() / 1024);
+		if ($name === true)
+		{
+			$times = array();
+
+			foreach(array_keys(self::$marks) as $name)
+				$times[$name] = self::get($name, $decimals);
+
+			return $times;
+		}
+
+		if (!isset(self::$marks[$name]))
+			return false;
+
+		if (self::$marks[$name]['stop'] === false)
+			self::stop($name);
+
+		return array
+		(
+			'time'   => number_format(self::$marks[$name]['stop'] - self::$marks[$name]['start'], $decimals),
+			'memory' => convert_size(self::$marks[$name]['memory_stop'] - self::$marks[$name]['memory_start'])
+		);
 	}
 
 } // end Benchmark class
@@ -829,6 +844,19 @@ function html_encode($string)
 {
 	return htmlentities($string, ENT_QUOTES, 'UTF-8') ;
 }
+function html_decode($string)
+{
+	return html_entity_decode($string, ENT_QUOTES, 'UTF-8') ;
+}
+
+/*
+   Function: valid_email
+   Validate email address
+*/
+function valid_email($email)
+{
+	return (bool) preg_match("/^([a-z0-9\+_\-]+)(\.[a-z0-9\+_\-]+)*@([a-z0-9\-]+\.)+[a-z]{2,6}$/ix", $email);
+}
 
 /*
    Function: get_request_method
@@ -854,6 +882,16 @@ function page_not_found()
 	
 	Observer::notify('system.shutdown');
 	exit;
+}
+
+// convert size in byte to the easiest humain readable size
+function convert_size($num)
+{
+	if ($num >= 1073741824) $num = round($num / 1073741824 * 100) / 100 .' gb';
+	else if ($num >= 1048576) $num = round($num / 1048576 * 100) / 100 .' mb';
+	else if ($num >= 1024) $num = round($num / 1024 * 100) / 100 .' kb';
+	else $num .= ' b';
+	return $num;
 }
 
 // debug fonction displaying reversed trace ----------------------------------
