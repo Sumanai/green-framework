@@ -29,8 +29,6 @@
       Philippe Archambault <philippe.archambault@gmail.com>
 */
 
-Benchmark::start('start');
-
 // Framework constants
 
 defined('DEBUG')              or define('DEBUG', false);
@@ -86,8 +84,6 @@ if (ENABLE_PROFILER)
 	Observer::observe('system.shutdown', array('Profiler', 'display'));
 }
 
-Observer::notify('system.init');
-
 /*
    Class: Green
 
@@ -139,7 +135,7 @@ final class Green
 	*/
 	public static function dispatch($url=null)
 	{
-		Benchmark::start('dispatch start');
+		Benchmark::start('dispatch');
 		
 		if ($url === null) $url = $_SERVER['QUERY_STRING'];
 		
@@ -249,7 +245,7 @@ final class Green
 			throw new Exception("Class '{$controller_class_name}' does not extends Controller class!");
 
 		Observer::notify('system.execute');
-		Benchmark::start('execute start');
+		Benchmark::start('execute');
 
 		// execute the action
 		$controller->execute($action, $params);
@@ -723,6 +719,8 @@ final class Benchmark
 
 } // end Benchmark class
 
+Benchmark::start('total');
+
 /*
    Class: Inflector
 
@@ -907,3 +905,5 @@ function green_framework_exception_handler($e)
 }
 
 set_exception_handler('green_framework_exception_handler');
+
+Observer::notify('system.init');

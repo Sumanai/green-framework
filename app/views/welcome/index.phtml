@@ -29,7 +29,7 @@ pre { margin: 14px 0; padding: 12px 10px; font-family: Monaco, Verdana, Sans-ser
 
 <p>If you are exploring Green Framework for the very first time, you should start by reading the <a href="#" title="not done yet">User Guide</a>.</p>
 
-<p class="page-stats">Page rendered in <b><?php $bm = Benchmark::get('start'); echo $bm['time']; ?></b> seconds.<br />Use <b><?php echo $bm['memory']; ?></b> of memories.</p>
+<p class="page-stats">Page rendered in <b><?php $bm = Benchmark::get('total'); echo $bm['time']; ?></b> seconds.<br />Use <b><?php echo $bm['memory']; ?></b> of memories.</p>
 
 </body>
 </html>

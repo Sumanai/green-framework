@@ -54,11 +54,10 @@ final class Profiler
 		self::displayTable($status, 'Dispatcher status');
 
 		$markers = array();
-		$old_mark = '';
-		foreach(Benchmark::$mark as $mark => $time)
+		foreach(Benchmark::$marks as $mark => $time)
 		{
-			$markers[$mark] = Benchmark::time($old_mark, $mark);
-			$old_mark = $mark;
+			$bm = Benchmark::get($mark);
+			$markers[$mark] = $bm['time'];
 		}
 		self::displayTable($markers, 'Benchmark');
 
